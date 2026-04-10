@@ -1,5 +1,4 @@
 myvenv/
-.env/
+.env
 __pycache__/
 .pytest_cache/
-example.env
