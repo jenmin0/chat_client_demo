@@ -100,7 +100,7 @@ def test_chat_with_tools_integration():
                                         })
 
     answer = client.chat_with_tools("How's the weather in Frankfurt and what is 123 * 456?")
-    print("Final Answer: ", answer)
+    # print("Final Answer: ", answer)
     assert answer is not None
     assert isinstance(answer, str)
     assert len(answer) > 0
