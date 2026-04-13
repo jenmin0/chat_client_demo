@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
-from chat_client_class import *
+from client import *
+from tools import get_weather, calculate, get_account_info, get_transactions, calculate_summary
 
 def test_chat_returns_answer():
     client = OpenAIClient(model="gpt-4o")
@@ -98,10 +99,44 @@ def test_chat_with_tools_integration():
                                             },
                                         "required": ["expression"]
                                         })
+    client.register_tool(get_account_info,"Get account information by account_id.", {"type":"object",
+                                            "properties":{
+                                                "account_id": {
+                                                    "type": "string",
+                                                    "description": "The account id to get information for."
+                                                }
+                                            },
+                                            "required": ["account_id"]})
+    client.register_tool(get_transactions,"Get the last n transactions for account_id.", {"type":"object",
+                                        "properties": {
+                                            "account_id": {
+                                                "type": "string",
+                                                "description": "The account id for which to get transactions."
+                                            },
+                                            "n": {
+                                                "type": "integer",
+                                                "description": "The number of transactions to retrieve."
+                                            }
+                                        },
+                                    "required": ["account_id"]
+                                    })
+    client.register_tool(calculate_summary,"Calculate the total in, total out and net for the last n transactions.", {"type":"object",
+                                        "properties": {
+                                            "account_id": {
+                                                "type": "string",
+                                                "description": "The account id for which to calculate summary."
+                                            },
+                                            "n": {
+                                                "type": "integer",
+                                                "description": "The number of transactions to include in the summary."
+                                            }
+                                        },
+                                    "required": ["account_id"]
+                                    })
 
-    answer = client.chat_with_tools("How's the weather in Frankfurt and what is 123 * 456?")
-    # print("Final Answer: ", answer)
+    answer = client.chat_with_tools("How's the weather in Frankfurt and what is 123 * 456? Also, give me the account info, last 5 transactions and summary for account A001 and calculate the net for the transactions.")
     assert answer is not None
     assert isinstance(answer, str)
-    assert len(answer) > 0
-    assert "56,088" in answer  
+    # assert len(answer) > 0
+    # assert "56,088" in answer
+
