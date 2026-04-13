@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import os
 import tiktoken
 
+from tools import _execute_tool
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -17,7 +19,7 @@ class OpenAIClient:
         self.prompt = ""
         self.tools = []
 
-    def chat(self, text):
+    def chat(self, text: str) -> str:
         """Single chat, the chat history is not taken into account"""
         temp_messages = ([self.prompt] if self.prompt else []) + [{"role":"user","content":text}]
         print("User: ", text)
@@ -31,7 +33,7 @@ class OpenAIClient:
         print("Assistant: ", answer)
         return answer
 
-    def chat_with_history(self, text):
+    def chat_with_history(self, text: str) -> str:
         """Start a new chat based on chat history"""
         self.messages.append({"role":"user","content":text})
         print("User: ", text)
@@ -55,7 +57,7 @@ class OpenAIClient:
         self.prompt = {"role":"system","content":prompt}
         
 
-    def count_tokens(self, text):
+    def count_tokens(self, text: str) -> int:
         """Count input tokens. """
         encoding = tiktoken.encoding_for_model(self.model)
         return len(encoding.encode(text))
@@ -65,7 +67,7 @@ class OpenAIClient:
         with open("chat_history.json", "w", encoding="utf-8") as f:
             json.dump(self.messages, f, ensure_ascii=False)
 
-    def register_tool(self,function, description, parameters):
+    def register_tool(self, function, description, parameters):
         """Register a tool for the agent."""
         self.tools.append({"type":"function", 
                            "function": {"name": function.__name__, "description": description, 
@@ -74,7 +76,7 @@ class OpenAIClient:
                            })
                            
         
-    def chat_with_tools(self, text):
+    def chat_with_tools(self, text: str) -> str:
         """Start a new chat with tools."""
 
         temp_messages = [{"role": "system", "content": "Don't make assumptions about what "
@@ -83,49 +85,63 @@ class OpenAIClient:
         {"role":"user","content":text}]
 
         print("User: ", text)
-        response = self.client.chat.completions.create(
-            model = self.model,
-            messages = temp_messages,
-            tools = self.tools
-        )
 
-        message = response.choices[0].message
-        if message.tool_calls:
-            temp_messages.append(message)
-            for call in message.tool_calls:
-                tool_name = call.function.name
-                arguments = json.loads(call.function.arguments)
-                tool_result = self._execute_tool(tool_name, arguments)
-                print(f"Tool {tool_name} called with arguments {arguments}, returned {tool_result}")
-                temp_messages.append({"role":"tool","tool_call_id": call.id,"content": tool_result})
-
-            second_response = self.client.chat.completions.create(
+        while True:
+            response = self.client.chat.completions.create(
                 model = self.model,
                 messages = temp_messages,
-                tools=self.tools
+                tools = self.tools
             )
 
-            answer = second_response.choices[0].message.content
-        else:
-            answer = message.content
-        print("Assistant: ", answer)
-        return answer
+            message = response.choices[0].message
+            if message.tool_calls:
+                temp_messages.append(message)
+                for call in message.tool_calls:
+                    tool_name = call.function.name
+                    arguments = json.loads(call.function.arguments)
+                    tool_result = _execute_tool(tool_name, arguments)
+                    print(f"Tool {tool_name} called with arguments {arguments}, returned {tool_result}")
+                    temp_messages.append({"role":"tool","tool_call_id": call.id,"content": tool_result})
+
+                # second_response = self.client.chat.completions.create(
+                #     model = self.model,
+                #     messages = temp_messages,
+                #     tools=self.tools
+                # )
+
+            else:
+                answer = message.content
+                print("Assistant: ", answer)
+                return answer
     
-    def _execute_tool(self, tool_name, arguments):
-        """Execute the tool and return the result."""
-        if tool_name == "get_weather":
-            return get_weather(**arguments)
-        elif tool_name == "calculate":
-            return calculate(**arguments)
-        else:
-            return f"Tool {tool_name} not found."
+    def chat_with_tools_and_history(self, text: str) -> str:
+        """Start a new chat with tools and chat history."""
 
-    
+        self.messages.append({"role":"user","content":text})
+        print("User: ", text)
 
-def get_weather(city):
-    """Example tool function to get weather information."""
-    return f"{city} today is sunny with a high of 25°C and a low of 15°C."
+        while True:
+            response = self.client.chat.completions.create(
+                model = self.model,
+                messages = ([self.prompt] if self.prompt else []) + self.messages,
+                tools = self.tools
+            )
 
-def calculate(expression):
-    return str(eval(expression))
+            message = response.choices[0].message
+            if message.tool_calls:
+                self.messages.append(message)
+                for call in message.tool_calls:
+                    tool_name = call.function.name
+                    arguments = json.loads(call.function.arguments)
+                    tool_result = _execute_tool(tool_name, arguments)
+                    print(f"Tool {tool_name} called with arguments {arguments}, returned {tool_result}")
+                    self.messages.append({"role":"tool","tool_call_id": call.id,"content": tool_result})
+            else:
+                answer = message.content
+                print("Assistant: ", answer)
+                self.messages.append({"role":"assistant","content":answer})
+                return answer
+
+
+
 

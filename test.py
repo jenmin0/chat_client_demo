@@ -140,3 +140,46 @@ def test_chat_with_tools_integration():
     # assert len(answer) > 0
     # assert "56,088" in answer
 
+def test_chat_with_tools_and_history():
+    client = OpenAIClient(model="gpt-4o")
+    client.prompt = {"role": "system", "content": "Don't make assumptions about what "
+        "values to plug into functions. Don't make up values to fill the response with. "
+        "Ask for clarification if needed."}
+    client.register_tool(get_account_info,"Get account information by account_id.", {"type":"object",
+                                            "properties":{
+                                                "account_id": {
+                                                    "type": "string",
+                                                    "description": "The account id to get information for."
+                                                }
+                                            },
+                                            "required": ["account_id"]})
+    client.register_tool(get_transactions,"Get the last n transactions for account_id.", {"type":"object",
+                                        "properties": {
+                                            "account_id": {
+                                                "type": "string",
+                                                "description": "The account id for which to get transactions."
+                                            },
+                                            "n": {
+                                                "type": "integer",
+                                                "description": "The number of transactions to retrieve."
+                                            }
+                                        },
+                                    "required": ["account_id"]
+                                    })
+    client.register_tool(calculate_summary,"Calculate the total in, total out and net for the last n transactions.", {"type":"object",
+                                        "properties": {
+                                            "account_id": {
+                                                "type": "string",
+                                                "description": "The account id for which to calculate summary."
+                                            },
+                                            "n": {
+                                                "type": "integer",
+                                                "description": "The number of transactions to include in the summary."
+                                            }
+                                        },
+                                    "required": ["account_id"]
+                                    })
+    client.chat_with_tools_and_history("Give me the account info for A001.")
+    client.chat_with_tools_and_history("Now show me the last 3 transactions for that account.")
+    client.chat_with_tools_and_history("And what's the summary for those transactions?")
+

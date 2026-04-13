@@ -9,24 +9,7 @@ ACCOUNTS = {
     "A003": {"owner": "Tom Weber",    "balance": 310.00,   "status": "frozen"},
 }
 
-TOOL_REGISTRY = {
-    "get_weather": get_weather,
-    "calculate": calculate,
-    "get_account_info": get_account_info,
-    "get_transactions": get_transactions,
-    "calculate_summary": calculate_summary
-}
-
-def _execute_tool(tool_name: str, arguments: dict) -> str:
-    """Execute the tool and return the result."""
-
-    for t_name, t_function in TOOL_REGISTRY.items():
-        if t_name == tool_name:
-            return t_function(**arguments)
-        else:
-            return f"Tool {tool_name} not found."
-
-    
+   
 
 def get_weather(city: str)  -> str:
     """Example tool function to get weather information."""
@@ -90,3 +73,20 @@ def calculate_summary(account_id: str, n: int = 5) -> str:
     net = total_in - total_out
 
     return f"Last {n} transactions | In: €{total_in:.2f} | Out: €{total_out:.2f} | Net: {'+' if net >= 0 else '-'}€{net:.2f}"
+
+
+
+def _execute_tool(tool_name: str, arguments: dict) -> str:
+    """Execute the tool and return the result."""
+
+    TOOL_REGISTRY = {
+        "get_weather": get_weather,
+        "calculate": calculate,
+        "get_account_info": get_account_info,
+        "get_transactions": get_transactions,
+        "calculate_summary": calculate_summary
+    }
+    if tool_name in TOOL_REGISTRY:
+        return TOOL_REGISTRY[tool_name](**arguments)
+    else:
+        return f"Tool {tool_name} not found."
