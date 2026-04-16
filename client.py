@@ -6,6 +6,7 @@ import tiktoken
 
 from tools import _execute_tool
 
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -141,7 +142,4 @@ class OpenAIClient:
                 print("Assistant: ", answer)
                 self.messages.append({"role":"assistant","content":answer})
                 return answer
-
-
-
 
